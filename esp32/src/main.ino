@@ -1,6 +1,15 @@
+#ifdef ESP32
+  #include <WiFiClientSecure.h>
+  #include <HTTPClient.h>
+#else
+  #include <ESP8266WiFi.h>
+  #include <ESP8266HTTPClient.h>
+#endif
+
 #include <SparkFunTSL2561.h>
 #include <Wire.h>
 #include <OneWire.h>
+#include <HTTPClient.h>
  
 // DS18S20 Temperature chip i/o
 OneWire ds(19);  // on pin 6
@@ -13,7 +22,16 @@ SFE_TSL2561 light;
  
 boolean gain; // Gain setting, 0 = X1, 1 = X16;
 unsigned int ms; // Integration ("shutter") time in milliseconds
- 
+
+
+//WiFi設定
+const char* ssid     = "";
+const char* password = "";
+
+const char *server = "hooks.slack.com";
+
+HTTPClient http; 
+
 void setup(void) {
   // initialize inputs/outputs
   // start serial port
@@ -75,12 +93,27 @@ light.setPowerUp();
 // The sensor will now gather light during the integration time.
 // After the specified time, you can retrieve the result from the sensor.
 // Once a measurement occurs, another integration period will start.
+
+ //Wifi 接続
+    WiFi.begin(ssid, password);
+    Serial.print("WiFi connecting");
+
+    while (WiFi.status() != WL_CONNECTED) {
+        Serial.print(".");
+        delay(100);
+    }
+    Serial.println(" connected");
+
+
 }
+
  
 void loop(void) {
   // ms = 1000;
   // light.manualStart();
-  delay(ms);
+
+  //delay(ms);
+  delay(3000);
 
   // light.manualStop();
  
@@ -126,11 +159,46 @@ byte error = light.getError();
 printError(error);
 }
 
+  //delay(3000);
   float temperature = getTemperature();
  
   Serial.print(temperature);
   Serial.println();
-  delay(2000);
+  delay(3000);
+
+  //slack();
+  
+int s = "toshi";
+Serial.print("posting data...");
+http.begin( "https://hooks.slack.com/services/xxxxxx");
+ http.addHeader("Content-Type", "application/json");
+  int httpCode = http.POST("{'username':'IoT-DATA', 'text':':door::bell: $s'}");
+
+ if(httpCode > 0) {
+    Serial.printf("[HTTP] POST... code: %d\n", httpCode);
+  } else {
+    Serial.printf("[HTTP] POST... failed, error: %s\n", http.errorToString(httpCode).c_str());
+  }
+
+  //http.end();
+  Serial.println ("Slack done");
+
+}
+
+void slack(){
+Serial.print("posting data...");
+http.begin( "https://hooks.slack.com/services/xxxxxx");
+ http.addHeader("Content-Type", "application/json");
+  int httpCode = http.POST("{'username':'IoT-DATA', 'text':':door::bell: #{lux}'}");
+
+ if(httpCode > 0) {
+    Serial.printf("[HTTP] POST... code: %d\n", httpCode);
+  } else {
+    Serial.printf("[HTTP] POST... failed, error: %s\n", http.errorToString(httpCode).c_str());
+  }
+
+  //http.end();
+  Serial.println ("Slack done");
 }
 
 void printError(byte error)
