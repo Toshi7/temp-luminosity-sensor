@@ -12,7 +12,7 @@
 #include <HTTPClient.h>
  
 // DS18S20 Temperature chip i/o
-OneWire ds(19);  // on pin 6
+OneWire ds(19);  // on pin 19 
 
 // Create an SFE_TSL2561 object, here called "light":
  
@@ -125,9 +125,8 @@ void loop(void) {
 // Retrieve the data from the device:
  
 unsigned int data0, data1;
- 
-if (light.getData(data0,data1))
-{
+String lux_string; 
+if (light.getData(data0,data1)){
 // getData() returned true, communication was successful
  
 Serial.print("data0: ");
@@ -137,57 +136,51 @@ Serial.print(data1);
 
 // To calculate lux, pass all your settings and readings
 // to the getLux() function.
- 
+
 double lux; // Resulting lux value
 boolean good; // True if neither sensor is saturated
  
 // Perform lux calculation:
- 
+
 good = light.getLux(gain,ms,data0,data1,lux);
- 
+
 // Print out the results:
- 
+
 Serial.print(" lux: ");
 Serial.print(lux);
+lux_string  = String(lux);
 if (good) Serial.println(" (good)"); else Serial.println(" (BAD)");
-}
-else
-{
+}else{
 // getData() returned false because of an I2C error, inform the user.
- 
 byte error = light.getError();
 printError(error);
 }
-
-  //delay(3000);
+//  String lux_string  = String(lux);
+delay(3000);
   float temperature = getTemperature();
- 
+ String tmp_string  = String(temperature);
+  delay(3000);
   Serial.print(temperature);
   Serial.println();
-  delay(3000);
-
   //slack();
-  
-int s = "toshi";
+String s = "toshi";
 Serial.print("posting data...");
-http.begin( "https://hooks.slack.com/services/xxxxxx");
- http.addHeader("Content-Type", "application/json");
-  int httpCode = http.POST("{'username':'IoT-DATA', 'text':':door::bell: $s'}");
+http.begin("https://hooks.slack.com/services/");
+http.addHeader("Content-Type", "application/json");
+int httpCode = http.POST("{'username':'IoT-DATA', 'text':':door::bell: lux: " + lux_string + " temperature: " + tmp_string  + " '}");
 
- if(httpCode > 0) {
-    Serial.printf("[HTTP] POST... code: %d\n", httpCode);
-  } else {
-    Serial.printf("[HTTP] POST... failed, error: %s\n", http.errorToString(httpCode).c_str());
-  }
-
-  //http.end();
-  Serial.println ("Slack done");
-
+if(httpCode > 0) {
+Serial.printf("[HTTP] POST... code: %d\n", httpCode);
+} else {
+Serial.printf("[HTTP] POST... failed, error: %s\n", http.errorToString(httpCode).c_str());
+}
+//http.end();
+Serial.println ("Slack done");
 }
 
 void slack(){
 Serial.print("posting data...");
-http.begin( "https://hooks.slack.com/services/xxxxxx");
+http.begin( "https://hooks.slack.com/services/");
  http.addHeader("Content-Type", "application/json");
   int httpCode = http.POST("{'username':'IoT-DATA', 'text':':door::bell: #{lux}'}");
 
